@@ -1,0 +1,657 @@
+---
+title: "Practica 4"
+author: "J. Rojas, X. Díaz"
+date: "3/7/2022"
+output: 
+  html_document:
+    toc: yes
+  pdf_document:
+    toc: yes
+  word_document:
+    toc: yes
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+Git hub project: <https://github.com/XochitlDiaz/BioifoII_pubrep>
+
+# Cluster Usage
+
+```{r, eval=FALSE}
+module load kallisto/0.45.0
+```
+
+# Data Description
+
+Data was obtained through a repository from an experiment for expression
+profiling by high throughput sequencing of RUNX1.
+
+RUNX1 is a transcription factor that can function both as an oncogene
+and tumor suppressor in breast cancer. Because RUNX1 alters chromatin
+structure, the original experiment was performed to characterize
+genome-wide RUNX1-mediated transcription and genome organization, but
+here we only analyze RUNX1-mediated transcription.
+
+Experiments where conducted with MCF-7 (breast cancer) cell line. For
+the control, 3 cell lines where treated with shNS (short hairpin
+Non-Specific RNA). For the knock down of RUNX1, 3 cell lines where
+treated with shRUNX1.
+
+We expect that RUNX1 depletion leads to up-regulation of genes
+associated with chromatin structure and down-regulation of genes related
+to extracellular matrix biology.
+
+We will perform an differential expression analysis of the 6 single-end
+reads in order to test the previous hypothesis.
+
+# Quality Control
+
+In the section "general statistics" it's worth noting that some samples
+have a higher number of reads than others. This should not progress into
+a problem since we will normalize all our data before drawing
+conclusions. In this case, normalizing the number of counts is what we
+will be paying attention to, but normalizing for other bias inducing
+factors may be necessary.
+
+![](./General_stats.png) The sequence quality plot reveals that every
+position has a base-quality score above 30. This is well above an
+accepted score, which means we can assure that no quality-score related
+errors will be likely to occur. It is also important to point out that
+there is a base-quality drop around nucleotide 76, this should not
+generate a problem; however, we should keep this detail in mind for
+further analysis.
+
+![](./Sequence_quality_histogram.png) In the "per Base Sequence Content"
+section; we note that the first 12 bases exhibit an over-representation
+of some nucleotides. This is probably due to the presence of Illumina's
+adaptors. We expect to correct this with the trimming process. The rest
+of our bases seem to also reveal a slight over-representation of some
+nucleotides; however, this is acceptable given that we are dealing with
+RNA-Seq data.
+
+![](./Per_base_sequence_content.png) This property of RNA-Seq obtained
+data also makes our GC-content plot look unfavorable, however we know
+this is also due to the nature of how we obtained our data.
+
+![](./Per_sequence_GC_content.png) The Per Base N Content plot reveals
+that the percentage N-count is zero o really near to zero for all our
+samples in every single position. This is means there were no problems
+in the base-calling process during sequencing, which speaks in favour of
+our data quality.
+
+![](./Per_Base_N_Content.png) In the "Sequence Length Distribution"
+section; we observed that all of our samples have sequences of a single
+length (101bp).Despite of this, we consider this might be an error; we
+filtered sequences by their length anyways.
+
+In the "Sequence Duplication Levels" section; we observed some high
+duplication levels. Since we have RNA-seq, it is expected to observe
+high rates of read duplicates. Actually, it seems that the general
+consensus in Biostar is not to remove duplicates from RNA-seq data.
+
+![](./Sequence_duplication_levels.png) Finally, In "Overrepresented
+sequences" and "Adapter Content" sections, we observed both a slight
+percentage of over-represented sequences and the presence of adapters.
+We think that by trimming adapters, the percentage of overrepresented
+sequences will go down a bit. We consider that having overrepresented
+sequences in RNA-seq data is common.
+
+![](./Overrepresented_sequences.png)
+
+![](./Adapter_content.png) <!-- coment -->
+
+# Trimming
+
+We decided to use trimmomatic tools for this data because it allows us
+to work with single-end reads.
+
+We have 6 samples, so we sent 6 jobs with the following structure:
+
+trimmomatic SE -phred33 -input file- -output file- ILLUMINACLIP:-file
+with adapters-:-seed mismatches-:-palindrome clip threshold-:-simple
+clip threshold- SLIDINGWINDOW:-windowSize-:-requiredQuality-
+MINLEN:-length-
+
+-   SE: indicates that our data is single-end.
+
+-   -phred33: indicates that we will be using phred+33 encoding.
+
+-   Input file: SRR2919468.fastq.gz.
+
+-   Output file: SRR2919468_trmd_1.fastq
+
+-   ILLUMINACLIP: This will cut adapters and other illumina-specific
+    sequences from the read. In this case, we only trimmed the adapters
+    specified in TruSeq3-SE.fa file for the reasons we stated in the
+    quality control section.
+
+-   seed mismatches: specifies the maximum mismatch count which will
+    still allow a full match to be performed. We decided to use 2 in
+    this parameter because it is a common value we have seen in biostars
+    for this data.
+
+-   palindrome clip threshold: specifies how accurate the match between
+    the two 'adapter ligated' reads must be for PE palindrome read
+    alignment. We decided to use 30 in this parameter because it is a
+    common value we have seen in biostars for this data.
+
+-   simple clip threshold: specifies how accurate the match between any
+    adapter etc. sequence must be against a read. We decided to use 10
+    in this parameter because it is a common value we have seen in
+    biostars for this data.
+
+-   SLIDINGWINDOW: This command performs a sliding window trimming,
+    cutting once the average quality within the window falls below a
+    threshold.
+
+-   window size: specifies the number of bases to average across. We
+    used 5 in this parameter because it is a common value we have seen
+    in biostars for this data.
+
+-   required quality: specifies the average quality required. We used 30
+    in this parameter because we consider it is a pretty good quality.
+
+-   MINLEN: <length> : specifies the minimum length of reads to be kept.
+    We decided to use 40 in this parameter because really smalls reads
+    will match everywhere. We consider that a length of 40 bp is an
+    optimal length for the aim of this analysis.
+
+# Post-Trimming Quality Control
+
+In the "General statistics" section the main feature is that the
+percentage of duplicate reads has decreased in comparison with the
+untrimmed samples.
+
+![](./General%20Statistics_trimmed.png) In the "per sequence quality
+score" plot we can observe that all the reads exhibit a quality score
+above 30.
+
+![](./Per_Sequence_Quality_Scores_trimmed.png) In the "per base sequence
+content" plot we can observe that almost nothing has changed in
+comparison with the untrimmed plot. This issue is something that can´t
+be correct by trimming and is due to a biased selection of random
+primers. It is said that nearly all RNA-Seq libraries will fail this
+plot because of this bias, but this is not a problem that seems to
+adversely affect the viability to measure expression.
+
+![](./Per_Base_Sequence_Content_trimmed.png) In the "per sequence GC
+content" plot we can observe an improvement in comparison to the
+untrimmed plot. In this case one sample passed the module without any
+warnings and 2 samples presented warnings. In the untrimmed plot 5 of 6
+samples did not pass the module. So we consider there was significant
+improvement after trimming.
+
+![](./Per_Sequence_GC_Content_trimmed.png) In the "sequence length
+distribution" plot; we can observe that almost all of our reads have a
+length around 100bp. We don´t understand why the untrimmed plot showed
+that all the reads had a length of 101bp.
+
+![](./Sequence_Length_Distribution_trimmed.png) Finally, In
+"Overrepresented sequences" and "Adapter Content" sections we observed
+both a slight decreased of over-represented sequences in comparison with
+the untrimmed plot. In the case of the "Adapter Content" plot we can see
+that all of our samples passed the module without warnings.
+
+![](./Overrepresented_sequences_trimmed.png)
+![](./Adapter_Content_trimmed.png) <!-- coment --> We conclude that our
+data are good enough to continue with the pipeline.
+
+# Indexing
+
+## Download Reference Transcriptome
+
+<h3>
+
+Commands
+
+</h3>
+
+```{r, eval=FALSE}
+wget https://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_39/gencode.v39.transcripts.fa.gz
+```
+
+<h3>
+
+Explanation
+
+</h3>
+
+The wget command allows us to download a file by providing the file URL
+from a public available server.
+
+## Kallisto Indexing
+
+<h3>
+
+Commands
+
+</h3>
+
+```{r, eval=FALSE}
+kallisto index -i index_gencode_v39_transcripts gencode.v39.transcripts.fa.gz
+```
+
+<h3>
+
+Explanation
+
+</h3>
+
+This command helps us index our transcriptome reference file. The -i
+parameter is used to determine the output of our indexed transcriptome.
+
+# Quantification
+
+## Obtain Paramaters
+
+<h3>
+
+Commands
+
+</h3>
+
+```{r, eval=FALSE}
+awk 'BEGIN { t=0.0;sq=0.0; n=0;} ;NR%4==2 {n++;L=length($0);t+=L;sq+=L*L;}END{m=t/n;printf("total %d avg=%f stddev=%f\n",n,m,sq/n-m*m);}' SRR2919468_trmd_1.fastq
+awk 'BEGIN { t=0.0;sq=0.0; n=0;} ;NR%4==2 {n++;L=length($0);t+=L;sq+=L*L;}END{m=t/n;printf("total %d avg=%f stddev=%f\n",n,m,sq/n-m*m);}' SRR2919469_trmd_1.fastq
+awk 'BEGIN { t=0.0;sq=0.0; n=0;} ;NR%4==2 {n++;L=length($0);t+=L;sq+=L*L;}END{m=t/n;printf("total %d avg=%f stddev=%f\n",n,m,sq/n-m*m);}' SRR2919470_trmd_1.fastq
+awk 'BEGIN { t=0.0;sq=0.0; n=0;} ;NR%4==2 {n++;L=length($0);t+=L;sq+=L*L;}END{m=t/n;printf("total %d avg=%f stddev=%f\n",n,m,sq/n-m*m);}' SRR2919471_trmd_1.fastq
+awk 'BEGIN { t=0.0;sq=0.0; n=0;} ;NR%4==2 {n++;L=length($0);t+=L;sq+=L*L;}END{m=t/n;printf("total %d avg=%f stddev=%f\n",n,m,sq/n-m*m);}' SRR2919472_trmd_1.fastq
+awk 'BEGIN { t=0.0;sq=0.0; n=0;} ;NR%4==2 {n++;L=length($0);t+=L;sq+=L*L;}END{m=t/n;printf("total %d avg=%f stddev=%f\n",n,m,sq/n-m*m);}' SRR2919473_trmd_1.fastq
+```
+
+<h3>
+
+Explanation
+
+</h3>
+
+Since our data is presented as single-read ends, we must specify the
+average length and standard deviation for each of our sequenced group of
+reads. To do this we used the regular awk command to obtain the
+mentioned information. Then we used this output to run quantification
+with kallisto.
+
+## Kallisto Quantification
+
+<h3>
+
+Commands
+
+</h3>
+
+```{r,eval=FALSE}
+kallisto quant -i Ref/index_gencode_v39_transcripts.fa -o out/kallisto/SRR2919469 --single -l 88.745296 -s 331.963008 trimmed/SRR2919468_trmd_1.fastq
+kallisto quant -i Ref/index_gencode_v39_transcripts.fa -o out/kallisto/SRR2919468 --single -l 90.280727 -s 296.307097 trimmed/SRR2919469_trmd_1.fastq
+kallisto quant -i Ref/index_gencode_v39_transcripts.fa -o out/kallisto/SRR2919470 --single -l 87.383824 -s 356.991374 trimmed/SRR2919470_trmd_1.fastq
+kallisto quant -i Ref/index_gencode_v39_transcripts.fa -o out/kallisto/SRR2919471 --single -l 85.915299 -s 354.540463 trimmed/SRR2919471_trmd_1.fastq
+kallisto quant -i Ref/index_gencode_v39_transcripts.fa -o out/kallisto/SRR2919472 --single -l 86.046524 -s 374.079060 trimmed/SRR2919472_trmd_1.fastq
+kallisto quant -i Ref/index_gencode_v39_transcripts.fa -o out/kallisto/SRR2919473 --single -l 85.100154 -s 371.832177 trimmed/SRR2919473_trmd_1.fastq
+```
+
+<h3>
+
+Explanation
+
+</h3>
+
+Since kallisto quant command produces its output into directories for
+each of the test file's name, first we created directories to fit this
+requirement, then we ran the specified commands in an sge file.
+
+The parameter (-i) in kallisto quant is used to specify the route and
+name of our index files.\
+The -o parameter is used to specify the output directory for each of the
+fastq files being quantified. Since these are single end reads, we must
+specify this with the flag "--single". The -l and -s parameters are used
+to specify mean fragment length and standard deviation for each file.
+Finally, we provide the command with each of the files we will quantify.
+
+#Normalization
+
+##Batch effect correction Batch effect correction wasn't necessary
+because all of the samples ran under the same batch, so there shouldn't
+be any any bias driven by variation in the sequencing batches.
+
+##DESeq2 Because we want to make differential expression analysis
+through RNA composition comparison between the samples of the
+experiment, we used DESeq2's normalization, given that it is an
+appropriate method for the data we are using.
+
+<h3>
+
+Commands
+
+</h3>
+
+```{r,eval=FALSE}
+library(tximport)
+library(tidyverse)
+
+#load sample data
+files <- file.path(list.dirs(),"abundance.h5")
+files <- files2[5:10]
+names(files) <- str_extract(files,"SRR\\d+") 
+files
+
+#Load the data of our reference genome
+tx2gene <- read.csv("/mnt/Timina/bioinfoII/rnaseq/resources/gencode/gencode.v38.basic.pc.transcripts.enstid_ensgid-nover.csv",stringsAsFactors = F)
+tx2genename <- read.csv("/mnt/Timina/bioinfoII/rnaseq/resources/gencode/gencode.v38.basic.pc.transcripts.enstid_genename-nover.csv",stringsAsFactors = F)
+
+#Generates the relation between reference genome and transcript samples 
+txi.kallisto <- tximport(files, type = "kallisto", tx2gene = tx2gene, ignoreAfterBar=TRUE, ignoreTxVersion=TRUE)
+txi.kallisto.name <- tximport(files, type = "kallisto", tx2gene = tx2genename, ignoreAfterBar=TRUE, ignoreTxVersion=TRUE)
+
+#To see the order of the data we have
+names(txi.kallisto)
+#Indicates the transcript counts of each gene for each sample
+head(txi.kallisto$counts)
+
+#Metadata of our samples
+samples <- read.csv("/mnt/Timina/bioinfoII/squinones/RNA-seq/RNA_MONI/SraRunTable_mod_cond_sort.txt",stringsAsFactors = F, header = TRUE)
+#Run is the column with the sample ID
+samples <- column_to_rownames(samples, var = "Run")
+
+library(DESeq2)
+
+#DESeq2 Data Set construction
+#We specify that the column condition has the value of shNS or shRUNX1
+#for each of the samples (the variable in the experiment)
+dds <- DESeqDataSetFromTximport(txi.kallisto,colData = samples,design = ~ condition)
+
+#Filtering to dismiss genes with few counts
+keep <- rowSums(counts(dds)) >= 6
+dds <- dds[keep, ]
+
+#Establish condition column as a factor value
+dds$condition <- factor(dds$condition, levels=c("shNS","shRUNX1"))
+
+dds <- DESeq(dds)
+
+res <- results(dds)
+```
+
+<h3>
+
+Explanation
+
+</h3>
+
+First we loaded R 4.0.2 in our working environment, then we opened R
+form the cluster terminal to run the code shown above. It is important
+to mention that to run the code we generated the R working environment
+at the working directory where we saved the output of kallisto
+quantification.
+
+First we used taximport to integrate the transcript data of our 6
+samples in a matrix with Homo Sapiens genes. We used version 38 of the
+genome for this data integration.
+
+To integrate the metadata of our samples in order to make indicate
+sample groups (condition groups) we downloaded the Metadata file,
+available at :
+\#<https://www.ncbi.nlm.nih.gov/Traces/study/?acc=PRJNA302327&o=acc_s%3Aa>
+Because this metadata file included data of ChiP-Seq, RNA-Seq, and other
+sample data, we deleted the rows that where not RNA-seq data from the
+.txt file. Additionally becuase the .txt file didn't include information
+of a column indicating which samples came form a shNA and shRUNX1
+experiment, we looked for further information at:
+<https://trace.ncbi.nlm.nih.gov/Traces/sra/?run=>[*sampleID*]{.ul} for
+each of the RNA-Seq samples and manually added a column in the .txt
+metadata file in order to crate the condition column with the according
+data.
+
+For the DESeq2 Data Set construction we use our taximport output matrix
+and indicate that that condition column has the group variables. After
+the the statistical modeling we filtered genes that had counts lower or
+equal to zero. Then we apply the Differential expression analysis with
+DESeq() function and finally we apply the results() function to see the
+log 2 fold change analysis in both groups (shNA vs shRUNX1).
+
+#Results
+
+<h3>
+
+Volcano plot
+
+</h3>
+
+![](./volcano-res.png) Shows the overall differentially expressed genes
+in shRUNX1 sample cell cultures using as base line shNS sample cell
+cultures. Overexpressed genes are shown in red. Underexpressed genes are
+show in blue. Genes that where not significantly over or under expressed
+are shown in gray.
+
+The most deferentially expressed genes are labeled. In the literature we
+found that these genes are prognostic markers in various types of
+cancer. (Ref8:Ref13)
+
+It is especially interesting that ENSG000001456325 is highly
+underexpressed given that it is a tumor suppressor. (Ref14)
+
+<h4>
+
+Code to make the plot
+
+</h4>
+
+```{r, eval=FALSE}
+# Add a column to the data frame to specify if they are UP- or DOWN- regulated (log2FoldChange respectively positive or negative)
+de <- as.data.frame(res)
+
+# add a column of NAs
+de$diffexpressed <- "NO"
+# if log2Foldchange > 1 and pvalue < 0.01, set as "UP" 
+de$diffexpressed[de$log2FoldChange > 1 & de$pvalue < 0.01] <- "UP"
+# if log2Foldchange < -1 and pvalue < 0.01, set as "DOWN"
+de$diffexpressed[de$log2FoldChange < -1 & de$pvalue < 0.01] <- "DOWN"
+
+#This library avoids lable overlap in plots
+library(ggrepel)
+
+# Create a new column "names" to de, that will contain the name of a subset if genes differentially expressed (NA in case they are not)
+de$names <- NA
+# filter for a subset of interesting genes
+filter <- which(de$diffexpressed != "NO" & de$padj < 0.01 & (de$log2FoldChange > 1 | de$log2FoldChange < -1)) #<<
+de$names[filter] <- rownames(de)[filter] #<<
+
+# Generate and save plot
+#save plot as png
+png(file = paste0(outdir,"volcano-res.png"),
+    width = 800, height = 800) #
+
+ggplot(data=de, aes(x=log2FoldChange, y=-log10(pvalue), col=diffexpressed, label=names)) + #<<
+    geom_point() +
+  geom_point(x=0.305969,y=1.337297875,col="green") +
+    scale_color_manual(values=c("blue", "black", "red")) + #change dot colour #<<
+    theme_minimal() +
+    geom_text_repel() + #<<
+    xlim(-15,15)
+
+dev.off()
+```
+
+<h3>
+
+Functional Analysis
+
+</h3>
+
+We used Gprofilter to make a gene ontology enrichment analysis to
+evaluate whether the results of our differential expression analysis
+make sense or not.
+
+![Go - over expressed](./gost01-resSig.png) Gene ontology enrichment
+analysis of overexpressed genes in shRUNX1 samples: From this figure we
+see a significant overexpression of H2AX complex II, which makes sense
+in the context of RUNX1 oncogenic mutant given that we previously knew
+RUNX1 is associated with genome organization. Searching in the
+literature we found H2AX is an H2A histone variant group (ref 2) found
+in response to DNA damage, so it makes sense finding it overexpressed in
+presence of an activated oncogene because these often lead to more
+mutations and DNA damage to which the cell would most likely be trying
+to repair. To further understand if this overexpression of H2AX is a
+direct cause of RUNX1 mutant or if it's a factor that leads to RUNX1
+mutant we would have to make a more ditailed analysis of the literature
+or even some experiments, which overpass the purpose of this assay.
+
+![Go - underexpressed](./gost02-resSig.png) Gene ontology enrichment
+analysis of underexpressed genes in shRUNX1 samples. Searching in the
+literature we found that many of the genes that are significantly
+under-expressed are related to extra cellular matrix signaling
+components, which may explain why the immunity system fails to recognize
+the oncogenic cell in order to kill it. Gene - function relation
+(Ref3:Ref7)
+
+-   TGFβ1, TGFβ2, and TGFβ3 : play an essential role in cellular
+    signaling and ECM remodeling.
+
+-   PLXNA4 : Signaling for cytoskeleton remodeling
+
+-   MMP14 and MMP2 : Breakdown of extracellular matrix.
+
+-   CLDN1 : Cell - cell spatial interactions.
+
+<h4>
+
+Code to make the plots
+
+</h4>
+
+```{r,eval=FALSE}
+library(ggrepel)
+library(gprofiler2)
+
+# For down-regulated genes
+
+# subset results for genes of interest
+resSig <- subset(res, padj < 0.01 & log2FoldChange < -1) # subset
+resSig <- resSig[ order(resSig$log2FoldChange, decreasing = TRUE), ]
+
+# define gene lists
+DEG <- rownames(resSig)
+genes_universe <- rownames(dds)
+
+# enrichment analysis
+gostres = gost(query = DEG, organism = "hsapiens", significant = T, 
+               correction_method = "fdr", domain_scope = "custom", 
+               custom_bg = genes_universe, ordered_query = TRUE)
+               
+library(forcats)
+library(ggplot2)
+
+outdir = "/mnt/Timina/bioinfoII/squinones/RNA-seq/RNA_MONI/"
+go <- as.data.frame(gostres$result)
+
+png(file = paste0(outdir,"gost02-resSig.png"),
+    width = 1800, height = 800) # guardar el plot en formato png
+# Reorder following the value of another column:
+go %>%
+  dplyr::slice(1:15) %>%
+  select(p_value, term_name) %>%
+  mutate(go = fct_reorder(term_name, p_value)) %>%
+  ggplot( aes(x=go, y=p_value)) +
+  geom_bar(stat="identity", fill="#3A68AE", alpha=.6, width=.4) +
+  coord_flip() +
+  labs(x = "", y = "Adjusted P-value") +
+  theme_bw(base_size = 20)
+
+dev.off()
+
+# For up-regulated genes
+
+# subset results for genes of interest
+resSig <- subset(res, padj < 0.01 & log2FoldChange > 1) # subset
+resSig <- resSig[ order(resSig$log2FoldChange, decreasing = TRUE), ]
+
+# define gene lists
+DEG <- rownames(resSig)
+genes_universe <- rownames(dds)
+
+# enrichment analysis
+gostres = gost(query = DEG, organism = "hsapiens", significant = T, 
+               correction_method = "fdr", domain_scope = "custom", 
+               custom_bg = genes_universe, ordered_query = TRUE)
+               
+library(forcats)
+library(ggplot2)
+
+outdir = "/mnt/Timina/bioinfoII/squinones/RNA-seq/RNA_MONI/"
+go <- as.data.frame(gostres$result)
+
+png(file = paste0(outdir,"gost02-resSig.png"),
+    width = 1800, height = 800) # guardar el plot en formato png
+# Reorder following the value of another column:
+go %>%
+  dplyr::slice(1:15) %>%
+  select(p_value, term_name) %>%
+  mutate(go = fct_reorder(term_name, p_value)) %>%
+  ggplot( aes(x=go, y=p_value)) +
+  geom_bar(stat="identity", fill="#3A68AE", alpha=.6, width=.4) +
+  coord_flip() +
+  labs(x = "", y = "Adjusted P-value") +
+  theme_bw(base_size = 20)
+
+dev.off()
+```
+
+#References
+
+Ref1: Mónica Padilla 2022, *RNA-seq Bioinformática - LCG-EJ*, Git Hub,
+viewed 10 March 2022,
+<https://github.com/mpadilla905/clase_RNA-seq_LCGEJ2022.git>
+
+Ref2: Uni Prot , *UniProtKB - P16104 (H2AX_HUMAN)* , Uni Prot,
+<https://www.uniprot.org/uniprot/P16104>
+
+Ref3:Uni Prot , *UniProtKB - P36897 (TGFR1_HUMAN)* , Uni Prot,
+<https://www.uniprot.org/uniprot/P36897>
+
+Ref4:Wikipedia, *Receptores de TGF-beta* , Wikipedia
+<https://es.wikipedia.org/wiki/Receptores_de_TGF-beta>
+
+Ref5:Uni Prot , *UniProtKB - Q9HCM2 (PLXA4_HUMAN)* , Uni Prot,
+<https://www.uniprot.org/uniprot/Q9HCM2>
+
+Ref5:Uni Prot , *UniProtKB - P50281 (MMP14_HUMAN)* , Uni Prot,
+<https://www.uniprot.org/uniprot/P50281>
+
+Ref6:Uni Prot , *UniProtKB - P08253 (MMP2_HUMAN)* , Uni Prot,
+<https://www.uniprot.org/uniprot/P08253>
+
+Ref7:Uni Prot , *UniProtKB - O95832 (CLD1_HUMAN)* , Uni Prot,
+<https://www.uniprot.org/uniprot/O95832>
+
+Ref8:Uni Prot , *UniProtKB - P16949 (STMN1_HUMAN)* , Uni Prot,
+<https://www.uniprot.org/uniprot/P16949>
+
+Ref9:Uni Prot , *UniProtKB - P68431 (H31_HUMAN)* , Uni Prot,
+<https://www.uniprot.org/uniprot/P68431>
+
+Ref10:Uni Prot , *UniProtKB - Q9NQW6 (ANLN_HUMAN)* , Uni Prot,
+<https://www.uniprot.org/uniprot/Q9NQW6>
+
+Ref11:Uni Prot , *UniProtKB - P06280 (AGAL_HUMAN)* , Uni Prot,
+<https://www.uniprot.org/uniprot/P06280>
+
+Ref12:Wikipedia, *HIST1H3C* , Wikipedia
+<https://en.wikipedia.org/wiki/HIST1H3C>
+
+Ref13:Uni Prot , *UniProtKB - Q8IZT6 (ASPM_HUMAN)* , Uni Prot,
+<https://www.uniprot.org/uniprot/Q8IZT6>
+
+Ref14:Uni Prot , *UniProtKB - Q9NYY3 (PLK2_HUMAN)* , Uni Prot,
+<https://www.uniprot.org/uniprot/Q9NYY3>
+
+Ref15: Pacher Lab, *Kallisto -Maual*, Pacher Lab,
+<https://pachterlab.github.io/kallisto/manual>
+
+Ref16: USADELLAB, *Trimmomatic: A flexible read trimming tool for
+Illumina NGS data*, USADELLAB ORG,
+<http://www.usadellab.org/cms/?page=trimmomatic>
+
+Ref17: MultiQC, *Using MultiQC*, MultiQC Docs,
+<https://multiqc.info/docs/>
+
+Ref18: Bioconductor, *Package 'taximport'*, Bioconductor,
+<https://bioconductor.org/packages/devel/bioc/manuals/tximport/man/tximport.pdf>
