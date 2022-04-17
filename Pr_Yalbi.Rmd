@@ -21,6 +21,7 @@ Git hub project: <https://github.com/XochitlDiaz/BioifoII_pubrep>
 ```{r, eval=FALSE}
 module load kallisto/0.45.0
 module load sra/2.9.6-1
+module load r/4.0.2
 
 ```
 
@@ -36,6 +37,36 @@ The commands used to retrieve the data was:
     
     scp <storage_dir>/SRR_Acc_List.txt crojas@dna.lavis.unam.mx:´<cluster_dir>/SRR_Acc_List.txt
     xargs fastq-dump <SRR_Acc_List.txt
+
+Commands used (unstructured)
+
+
+```{bash, eval=FALSE}
+cd /mnt/Timina/bioinfoII/XJS/Yalbi/kallisto
+module load r/4.0.2
+R
+
+(In R)
+> library(tximport)
+> library(tidyverse)
+> files <- file.path("/mnt/Timina/bioinfoII/XJS/Yalbi/kallisto", list.dirs(), "abundance.h5") 
+> names(files) <- str_extract(files,"SRR\\d+")
+> files = files[2:7]
+
+
+# Load table with trx id and gene id corrspondence
+tx2gene <- read.csv("/mnt/Timina/bioinfoII/rnaseq/resources/gencode/gencode.vM28.basic.trx_id-gene_id-no_ver.tsv",stringsAsFactors = F)
+# Load table with trx id and gene name corrspondence
+tx2genename <- read.csv("/mnt/Timina/bioinfoII/rnaseq/resources/gencode/gencode.vM28.basic.trx_id-gene_name-no_ver.tsv",stringsAsFactors = F)
+
+txi.kallisto <- tximport(files, type = "kallisto", tx2gene = tx2gene, ignoreAfterBar=TRUE, ignoreTxVersion=TRUE)
+txi.kallisto.name <- tximport(files, type = "kallisto", tx2gene = tx2genename, ignoreAfterBar=TRUE, ignoreTxVersion=TRUE)
+
+> library(DESeq2)
+
+
+```
+
 
 -----------Current progress
 # Quality Control
