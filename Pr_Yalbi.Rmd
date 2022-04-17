@@ -34,7 +34,7 @@ In this study, DE analysis was performed to identify the transcriptomic profile 
 
 The commands used to retrieve the data was:
     
-    scp <storage_dir>/SRR_Acc_List.txt crojas@dna.lavis.unam.mx:<cluster_dir>/SRR_Acc_List.txt
+    scp <storage_dir>/SRR_Acc_List.txt crojas@dna.lavis.unam.mx:´<cluster_dir>/SRR_Acc_List.txt
     xargs fastq-dump <SRR_Acc_List.txt
 
 -----------Current progress
