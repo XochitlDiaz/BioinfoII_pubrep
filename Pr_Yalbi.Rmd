@@ -130,8 +130,10 @@ library(gprofiler2)
 resSig <- subset(res, padj < 0.1 & log2FoldChange > 1)
 resSig <- resSig[ order(resSig$log2FoldChange, decreasing = TRUE), ]
 DEG <- rownames(resSig)
+genes_universe <- rownames(dds)
+
 # enrichment analysis
-gostres = gost(query = DEG, organism = "hsapiens", significant = T, 
+gostres = gost(query = DEG, organism = "mmusculus", significant = T, 
                correction_method = "fdr", domain_scope = "custom", 
                custom_bg = genes_universe, ordered_query = TRUE)
 names(gostres)
@@ -146,6 +148,8 @@ go <- as.data.frame(gostres$result)
 png(file = paste0(outdir,"gost01-resSig.png"),
     width = 800, height = 800) # guardar el plot en formato png
 # Reorder following the value of another column:
+library(ggplot2)
+library(dplyr)
 go %>%
   dplyr::slice(1:20) %>%
   select(p_value, term_name) %>%
