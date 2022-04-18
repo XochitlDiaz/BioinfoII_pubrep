@@ -68,6 +68,8 @@ txi.kallisto.name <- tximport(files, type = "kallisto", tx2gene = tx2genename, i
 ```
 
 
+
+
 -----------Current progress
 # Quality Control
 
