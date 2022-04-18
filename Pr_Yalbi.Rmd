@@ -56,14 +56,15 @@ R
 
 # Load table with trx id and gene id corrspondence
 tx2gene <- read.csv("/mnt/Timina/bioinfoII/rnaseq/resources/gencode/gencode.vM28.basic.trx_id-gene_id-no_ver.tsv",stringsAsFactors = F)
-# Load table with trx id and gene name corrspondence
+# Load table with trx id and gene name correspondence
 tx2genename <- read.csv("/mnt/Timina/bioinfoII/rnaseq/resources/gencode/gencode.vM28.basic.trx_id-gene_name-no_ver.tsv",stringsAsFactors = F)
 
 txi.kallisto <- tximport(files, type = "kallisto", tx2gene = tx2gene, ignoreAfterBar=TRUE, ignoreTxVersion=TRUE)
 txi.kallisto.name <- tximport(files, type = "kallisto", tx2gene = tx2genename, ignoreAfterBar=TRUE, ignoreTxVersion=TRUE)
 
 > library(DESeq2)
-
+samples <- read.csv("/mnt/Timina/bioinfoII/XJS/Yalbi/SraRunTable.txt",stringsAsFactors = F, header = TRUE)
+samples <- column_to_rownames(samples, var = "Run")
 
 ```
 
