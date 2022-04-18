@@ -16,6 +16,12 @@ editor_options:
 
 Git hub project: <https://github.com/XochitlDiaz/BioifoII_pubrep>
 
+#Save Rhistory
+history(max.show = Inf, reverse = T)
+
+
+
+
 # Cluster Usage
 
 ```{r, eval=FALSE}
@@ -134,9 +140,24 @@ head(gostres$result)
 
 ```
 
+```{r,eval=F}
+####More filters
+
+#Lower the false discovery rate threshold (the threshold on `padj` in the results table)
 
 
+res.05 <- results(dds, alpha = 0.05)
+table(res.05$padj < 0.05) # genes that rejected null hypothesis
+summary(res.05)
+# Raise the log2 fold change threshold from 0 using the `lfcThreshold` argument of results
+# test for genes that show more substantial changes due to treatment
+# `lfcThreshold = 1`, we test for genes that show significant effects of treatment on gene counts more than doubling or less than halving, because 2^1=2
 
+resLFC1 <- results(dds, lfcThreshold=1)
+table(resLFC1$padj < 0.1)
+```
+
+`
 -----------Current progress
 # Quality Control
 
@@ -450,14 +471,14 @@ library(DESeq2)
 #DESeq2 Data Set construction
 #We specify that the column condition has the value of shNS or shRUNX1
 #for each of the samples (the variable in the experiment)
-dds <- DESeqDataSetFromTximport(txi.kallisto,colData = samples,design = ~ condition)
+dds <- DESeqDataSetFromTximport(txi.kallisto,colData = samples,design = ~ treatment)
 
 #Filtering to dismiss genes with few counts
 keep <- rowSums(counts(dds)) >= 6
 dds <- dds[keep, ]
 
 #Establish condition column as a factor value
-dds$condition <- factor(dds$condition, levels=c("shNS","shRUNX1"))
+dds$treatment <- factor(dds$treatment, levels=c("TCS breastmilk","Regular breastmilk"))
 
 dds <- DESeq(dds)
 
@@ -548,11 +569,28 @@ de$names <- NA
 filter <- which(de$diffexpressed != "NO" & de$padj < 0.01 & (de$log2FoldChange > 1 | de$log2FoldChange < -1)) #<<
 de$names[filter] <- rownames(de)[filter] #<<
 
+####More filters
+
+#Lower the false discovery rate threshold (the threshold on `padj` in the results table)
+
+
+res.05 <- results(dds, alpha = 0.05)
+table(res.05$padj < 0.05) # genes that rejected null hypothesis
+summary(res.05)
+# Raise the log2 fold change threshold from 0 using the `lfcThreshold` argument of results
+# test for genes that show more substantial changes due to treatment
+# `lfcThreshold = 1`, we test for genes that show significant effects of treatment on gene counts more than doubling or less than halving, because 2^1=2
+
+resLFC1 <- results(dds, lfcThreshold=1)
+table(resLFC1$padj < 0.1)
+
+
+
+
 # Generate and save plot
 #save plot as png
-png(file = paste0(outdir,"volcano-res.png"),
-    width = 800, height = 800) #
-
+outdir = "/mnt/Timina/bioinfoII/XJS/Yalbi/kallisto/Results"
+png(file = paste0(outdir,"volcano_filter.png"), width = 800, height = 800) 
 ggplot(data=de, aes(x=log2FoldChange, y=-log10(pvalue), col=diffexpressed, label=names)) + #<<
     geom_point() +
   geom_point(x=0.305969,y=1.337297875,col="green") +
@@ -563,6 +601,39 @@ ggplot(data=de, aes(x=log2FoldChange, y=-log10(pvalue), col=diffexpressed, label
 
 dev.off()
 ```
+
+
+Filtered plot
+
+```{r, eval=FALSE}
+# Add a column to the data frame to specify if they are UP- or DOWN- regulated (log2FoldChange respectively positive or negative)
+deLFC1 <- as.data.frame(resLFC1)
+
+# add a column of NAs
+de$diffexpressed <- "NO"
+# if log2Foldchange > 0.6 and pvalue < 0.05, set as "UP" 
+de$diffexpressed[de$log2FoldChange > 0.6 & de$pvalue < 0.05] <- "UP"
+# if log2Foldchange < -0.6 and pvalue < 0.05, set as "DOWN"
+de$diffexpressed[de$log2FoldChange < -0.6 & de$pvalue < 0.05] <- "DOWN"
+
+png(file = paste0(outdir,"volcano04-res.png"),
+    width = 800, height = 800) # guardar el plot en formato png
+
+ggplot(data=de, aes(x=log2FoldChange, y=-log10(pvalue), col=diffexpressed)) + # cambiamos col param de aes #<<
+  geom_point() + theme_minimal() + 
+  geom_vline(xintercept=c(-0.6, 0.6), col="red") +
+  geom_hline(yintercept=-log10(0.05), col="red") +
+  xlim(-15,15)
+
+dev.off()
+```
+
+
+
+
+
+
+
 
 <h3>
 
