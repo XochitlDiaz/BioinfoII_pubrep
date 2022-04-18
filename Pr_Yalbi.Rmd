@@ -138,6 +138,26 @@ names(gostres)
 attributes(gostres$meta)
 head(gostres$result)
 
+
+library(forcats)
+outdir = "/mnt/Timina/bioinfoII/XJS/Yalbi/kallisto/Results/"
+go <- as.data.frame(gostres$result)
+
+png(file = paste0(outdir,"gost01-resSig.png"),
+    width = 800, height = 800) # guardar el plot en formato png
+# Reorder following the value of another column:
+go %>%
+  dplyr::slice(1:20) %>%
+  select(p_value, term_name) %>%
+  mutate(go = fct_reorder(term_name, p_value)) %>%
+  ggplot( aes(x=go, y=p_value)) +
+    geom_bar(stat="identity", fill="#3A68AE", alpha=.6, width=.4) +
+    coord_flip() +
+    labs(x = "", y = "Adjusted P-value") +
+    theme_bw(base_size = 20)
+
+dev.off()
+
 ```
 
 ```{r,eval=F}
