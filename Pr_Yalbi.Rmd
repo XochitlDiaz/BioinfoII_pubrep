@@ -72,6 +72,59 @@ txi.kallisto.name <- tximport(files, type = "kallisto", tx2gene = tx2genename, i
 samples <- read.csv("/mnt/Timina/bioinfoII/XJS/Yalbi/SraRunTable.txt",stringsAsFactors = F, header = TRUE)
 samples <- column_to_rownames(samples, var = "Run")
 
+dds <- DESeqDataSetFromTximport(txi.kallisto,colData = samples,design = ~ treatment)
+#dds$treatment <- factor(dds$treatment, levels = c("TCS breastmilk","Regular breastmilk"))
+
+keep <- rowSums(counts(dds)) >= 6
+dds <- dds[keep, ]
+dds$treatment <- factor(dds$treatment, levels = c("TCS breastmilk","Regular breastmilk"))
+dds <- DESeq(dds)
+res <- results(dds)
+
+de <- as.data.frame(res)
+de$diffexpressed <- "NO"
+de$diffexpressed[de$log2FoldChange > 1 & de$pvalue < 0.01] <- "UP"
+de$diffexpressed[de$log2FoldChange < -1 & de$pvalue < 0.01] <- "DOWN"
+
+library(ggrepel)
+de$names <- NA
+filter <- which(de$diffexpressed != "NO" & de$padj < 0.01 & (de$log2FoldChange > 1 | de$log2FoldChange < -1)) #<<
+de$names[filter] <- rownames(de)[filter] #<<
+
+res.05 <- results(dds, alpha = 0.05)
+table(res.05$padj < 0.05)
+
+resLFC1 <- results(dds, lfcThreshold=1)
+table(resLFC1$padj < 0.1)
+
+
+
+outdir = "/mnt/Timina/bioinfoII/XJS/Yalbi/kallisto/Results/"
+png(file = paste0(outdir,"volcano_plot.png"),
+    width = 800, height = 800) #
+
+ggplot(data=de, aes(x=log2FoldChange, y=-log10(pvalue), col=diffexpressed, label=names)) + #<<
+    geom_point() +
+  geom_point(x=0.305969,y=1.337297875,col="green") +
+    scale_color_manual(values=c("blue", "black", "red")) + #change dot colour #<<
+    theme_minimal() +
+    geom_text_repel() + #<<
+    xlim(-15,15)
+
+
+## For filtered data
+png(file = paste0(outdir,"volcano_filt.png"),
+    width = 800, height = 800)    
+ggplot(data=deLFC1, aes(x=log2FoldChange, y=-log10(pvalue), col=diffexpressed, label=names)) + #<<
+    geom_point() +
+  geom_point(x=0.305969,y=1.337297875,col="green") +
+    scale_color_manual(values=c("blue", "black", "red")) + #change dot colour #<<
+    theme_minimal() +
+    geom_text_repel() + #<<
+    xlim(-15,15)
+
+dev.off()
+
 ```
 
 ```{r,eval=F}
