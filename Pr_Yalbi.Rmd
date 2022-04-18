@@ -119,6 +119,19 @@ ggplot(data=deLFC1, aes(x=log2FoldChange, y=-log10(pvalue), col=diffexpressed, l
 
 dev.off()
 
+
+library(gprofiler2)
+resSig <- subset(res, padj < 0.1 & log2FoldChange > 1)
+resSig <- resSig[ order(resSig$log2FoldChange, decreasing = TRUE), ]
+DEG <- rownames(resSig)
+ enrichment analysis
+gostres = gost(query = DEG, organism = "hsapiens", significant = T, 
+               correction_method = "fdr", domain_scope = "custom", 
+               custom_bg = genes_universe, ordered_query = TRUE)
+names(gostres)
+attributes(gostres$meta)
+head(gostres$result)
+
 ```
 
 
