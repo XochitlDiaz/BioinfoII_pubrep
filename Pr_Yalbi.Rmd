@@ -44,7 +44,6 @@ The commands used to retrieve the data was:
     scp <storage_dir>/SRR_Acc_List.txt crojas@dna.lavis.unam.mx:´<cluster_dir>/SRR_Acc_List.txt
     xargs fastq-dump <SRR_Acc_List.txt
 
-Commands used (unstructured)
 
 
 ```{bash, eval=FALSE}
@@ -181,161 +180,16 @@ resLFC1 <- results(dds, lfcThreshold=1)
 table(resLFC1$padj < 0.1)
 ```
 
-`
------------Current progress
-# Quality Control
+## Data Download
 
-In the section "general statistics" it's worth noting that some samples
-have a higher number of reads than others. This should not progress into
-a problem since we will normalize all our data before drawing
-conclusions. In this case, normalizing the number of counts is what we
-will be paying attention to, but normalizing for other bias inducing
-factors may be necessary.
 
-![](./General_stats.png) The sequence quality plot reveals that every
-position has a base-quality score above 30. This is well above an
-accepted score, which means we can assure that no quality-score related
-errors will be likely to occur. It is also important to point out that
-there is a base-quality drop around nucleotide 76, this should not
-generate a problem; however, we should keep this detail in mind for
-further analysis.
+# RNA-seq Pipeline
 
-![](./Sequence_quality_histogram.png) In the "per Base Sequence Content"
-section; we note that the first 12 bases exhibit an over-representation
-of some nucleotides. This is probably due to the presence of Illumina's
-adaptors. We expect to correct this with the trimming process. The rest
-of our bases seem to also reveal a slight over-representation of some
-nucleotides; however, this is acceptable given that we are dealing with
-RNA-Seq data.
 
-![](./Per_base_sequence_content.png) This property of RNA-Seq obtained
-data also makes our GC-content plot look unfavorable, however we know
-this is also due to the nature of how we obtained our data.
+## Quality Control
 
-![](./Per_sequence_GC_content.png) The Per Base N Content plot reveals
-that the percentage N-count is zero o really near to zero for all our
-samples in every single position. This is means there were no problems
-in the base-calling process during sequencing, which speaks in favour of
-our data quality.
+After checking the metadata and data description of our reads, we realized that they had already been filtered and set to the same length. Therefore, it was no longer necessary to perform any clipping or filtering.
 
-![](./Per_Base_N_Content.png) In the "Sequence Length Distribution"
-section; we observed that all of our samples have sequences of a single
-length (101bp).Despite of this, we consider this might be an error; we
-filtered sequences by their length anyways.
-
-In the "Sequence Duplication Levels" section; we observed some high
-duplication levels. Since we have RNA-seq, it is expected to observe
-high rates of read duplicates. Actually, it seems that the general
-consensus in Biostar is not to remove duplicates from RNA-seq data.
-
-![](./Sequence_duplication_levels.png) Finally, In "Overrepresented
-sequences" and "Adapter Content" sections, we observed both a slight
-percentage of over-represented sequences and the presence of adapters.
-We think that by trimming adapters, the percentage of overrepresented
-sequences will go down a bit. We consider that having overrepresented
-sequences in RNA-seq data is common.
-
-![](./Overrepresented_sequences.png)
-
-![](./Adapter_content.png) <!-- coment -->
-
-# Trimming
-
-We decided to use trimmomatic tools for this data because it allows us
-to work with single-end reads.
-
-We have 6 samples, so we sent 6 jobs with the following structure:
-
-trimmomatic SE -phred33 -input file- -output file- ILLUMINACLIP:-file
-with adapters-:-seed mismatches-:-palindrome clip threshold-:-simple
-clip threshold- SLIDINGWINDOW:-windowSize-:-requiredQuality-
-MINLEN:-length-
-
--   SE: indicates that our data is single-end.
-
--   -phred33: indicates that we will be using phred+33 encoding.
-
--   Input file: SRR2919468.fastq.gz.
-
--   Output file: SRR2919468_trmd_1.fastq
-
--   ILLUMINACLIP: This will cut adapters and other illumina-specific
-    sequences from the read. In this case, we only trimmed the adapters
-    specified in TruSeq3-SE.fa file for the reasons we stated in the
-    quality control section.
-
--   seed mismatches: specifies the maximum mismatch count which will
-    still allow a full match to be performed. We decided to use 2 in
-    this parameter because it is a common value we have seen in biostars
-    for this data.
-
--   palindrome clip threshold: specifies how accurate the match between
-    the two 'adapter ligated' reads must be for PE palindrome read
-    alignment. We decided to use 30 in this parameter because it is a
-    common value we have seen in biostars for this data.
-
--   simple clip threshold: specifies how accurate the match between any
-    adapter etc. sequence must be against a read. We decided to use 10
-    in this parameter because it is a common value we have seen in
-    biostars for this data.
-
--   SLIDINGWINDOW: This command performs a sliding window trimming,
-    cutting once the average quality within the window falls below a
-    threshold.
-
--   window size: specifies the number of bases to average across. We
-    used 5 in this parameter because it is a common value we have seen
-    in biostars for this data.
-
--   required quality: specifies the average quality required. We used 30
-    in this parameter because we consider it is a pretty good quality.
-
--   MINLEN: <length> : specifies the minimum length of reads to be kept.
-    We decided to use 40 in this parameter because really smalls reads
-    will match everywhere. We consider that a length of 40 bp is an
-    optimal length for the aim of this analysis.
-
-# Post-Trimming Quality Control
-
-In the "General statistics" section the main feature is that the
-percentage of duplicate reads has decreased in comparison with the
-untrimmed samples.
-
-![](./General%20Statistics_trimmed.png) In the "per sequence quality
-score" plot we can observe that all the reads exhibit a quality score
-above 30.
-
-![](./Per_Sequence_Quality_Scores_trimmed.png) In the "per base sequence
-content" plot we can observe that almost nothing has changed in
-comparison with the untrimmed plot. This issue is something that can´t
-be correct by trimming and is due to a biased selection of random
-primers. It is said that nearly all RNA-Seq libraries will fail this
-plot because of this bias, but this is not a problem that seems to
-adversely affect the viability to measure expression.
-
-![](./Per_Base_Sequence_Content_trimmed.png) In the "per sequence GC
-content" plot we can observe an improvement in comparison to the
-untrimmed plot. In this case one sample passed the module without any
-warnings and 2 samples presented warnings. In the untrimmed plot 5 of 6
-samples did not pass the module. So we consider there was significant
-improvement after trimming.
-
-![](./Per_Sequence_GC_Content_trimmed.png) In the "sequence length
-distribution" plot; we can observe that almost all of our reads have a
-length around 100bp. We don´t understand why the untrimmed plot showed
-that all the reads had a length of 101bp.
-
-![](./Sequence_Length_Distribution_trimmed.png) Finally, In
-"Overrepresented sequences" and "Adapter Content" sections we observed
-both a slight decreased of over-represented sequences in comparison with
-the untrimmed plot. In the case of the "Adapter Content" plot we can see
-that all of our samples passed the module without warnings.
-
-![](./Overrepresented_sequences_trimmed.png)
-![](./Adapter_Content_trimmed.png) <!-- coment --> We conclude that our
-data are good enough to continue with the pipeline.
-
-# Indexing
 
 ## Download Reference Transcriptome
 
@@ -346,7 +200,7 @@ Commands
 </h3>
 
 ```{r, eval=FALSE}
-wget https://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_39/gencode.v39.transcripts.fa.gz
+wget https://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_mouse/release_M29/gencode.vM29.transcripts.fa.gz
 ```
 
 <h3>
@@ -356,7 +210,7 @@ Explanation
 </h3>
 
 The wget command allows us to download a file by providing the file URL
-from a public available server.
+from a public available server. We downloaded the full Mouse transcriptome from the GENCODE webpage.
 
 ## Kallisto Indexing
 
@@ -377,11 +231,11 @@ Explanation
 </h3>
 
 This command helps us index our transcriptome reference file. The -i
-parameter is used to determine the output of our indexed transcriptome.
+parameter is used to determine the output of our indexed transcriptome. This will allow us to perform kallisto quantification much faster and efficiently.
 
-# Quantification
+## Quantification
 
-## Obtain Paramaters
+### Obtain Paramaters
 
 <h3>
 
@@ -407,10 +261,10 @@ Explanation
 Since our data is presented as single-read ends, we must specify the
 average length and standard deviation for each of our sequenced group of
 reads. To do this we used the regular awk command to obtain the
-mentioned information. Then we used this output to run quantification
+aforementioned information. Then we used this output to run quantification
 with kallisto.
 
-## Kallisto Quantification
+### Kallisto Quantification
 
 <h3>
 
@@ -419,6 +273,7 @@ Commands
 </h3>
 
 ```{r,eval=FALSE}
+mkdir <each sample name>
 kallisto quant -i Ref/index_gencode_v39_transcripts.fa -o out/kallisto/SRR2919469 --single -l 88.745296 -s 331.963008 trimmed/SRR2919468_trmd_1.fastq
 kallisto quant -i Ref/index_gencode_v39_transcripts.fa -o out/kallisto/SRR2919468 --single -l 90.280727 -s 296.307097 trimmed/SRR2919469_trmd_1.fastq
 kallisto quant -i Ref/index_gencode_v39_transcripts.fa -o out/kallisto/SRR2919470 --single -l 87.383824 -s 356.991374 trimmed/SRR2919470_trmd_1.fastq
@@ -445,7 +300,7 @@ specify this with the flag "--single". The -l and -s parameters are used
 to specify mean fragment length and standard deviation for each file.
 Finally, we provide the command with each of the files we will quantify.
 
-#Normalization
+## Normalization
 
 ##Batch effect correction Batch effect correction wasn't necessary
 because all of the samples ran under the same batch, so there shouldn't
@@ -546,7 +401,7 @@ equal to zero. Then we apply the Differential expression analysis with
 DESeq() function and finally we apply the results() function to see the
 log 2 fold change analysis in both groups (shNA vs shRUNX1).
 
-#Results
+# Results
 
 <h3>
 
@@ -783,7 +638,7 @@ go %>%
 dev.off()
 ```
 
-#References
+# References
 
 Ref1: Mónica Padilla 2022, *RNA-seq Bioinformática - LCG-EJ*, Git Hub,
 viewed 10 March 2022,
