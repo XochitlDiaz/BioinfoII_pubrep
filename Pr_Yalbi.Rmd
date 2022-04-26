@@ -408,72 +408,32 @@ Then, we conducted filtering in two ways:
   + Genes with an adj. p-value lower than 0.05
   + Genes with an adj. p-value lower than 0.01 (This became our final collection)
 
-----------Current progress -------------
+Once we had these subsets, we realized that the 0.01 p-value gave the most direct and concrete results, but we also decided to produce results for other differentialy expressed genes without such a strict p-value threshold.
+
 
 # Results
 
-<h3>
-Volcano plot
-</h3>
+## Volcano plot
 
-![](./volcano-res.png) Shows the overall differentially expressed genes
-in shRUNX1 sample cell cultures using as base line shNS sample cell
-cultures. Overexpressed genes are shown in red. Underexpressed genes are
+![](./Volcano_plot.png) Shows the overall differentially expressed genes
+by comparing the TCS to regular breastmilk. 
+![](./Volcano_filt.png) Shows only the genes that passed our LCF1 filter with a 0.01 p-value threshold.
+Overexpressed genes are shown in red. Underexpressed genes are
 show in blue. Genes that where not significantly over or under expressed
-are shown in gray.
+are shown in black.
 
-The most deferentially expressed genes are labeled. In the literature we
-found that these genes are prognostic markers in various types of
-cancer. (Ref8:Ref13)
+The most differentially expressed genes are labeled. It is important to see the differences derived from using the full collection of differentially expressed genes versus the filtered subset. In this case, we can observe that the filtered plot seems to have a more uniform distribution, opposed to the obvious outliers seen in the unfiltered collection. Our group of interest is also reduced significantly when taking into account the filtered collection, and since this also means there will be a smaller chance of calling false positives, we will focus on this data.
+In corresponding literature we found that these genes are involved in metabolic pathways. 
+Specifically, we can see that ENSMUSG00000091144 stands out as an outlier, and in this case this is a protein-coding gene for a zinc finger. To further explore the implications of the overexpressed genes, we will analyze the number of differentially expressed genes by grouping them into function associated families. This will be our functional analysis.
 
-It is especially interesting that ENSG000001456325 is highly
-underexpressed given that it is a tumor suppressor. (Ref14)
 
 <h4>
-
-Code to make the plot
-
+Code
 </h4>
 
 ```{r, eval=FALSE}
-# Add a column to the data frame to specify if they are UP- or DOWN- regulated (log2FoldChange respectively positive or negative)
-de <- as.data.frame(res)
 
-# add a column of NAs
-de$diffexpressed <- "NO"
-# if log2Foldchange > 1 and pvalue < 0.01, set as "UP" 
-de$diffexpressed[de$log2FoldChange > 1 & de$pvalue < 0.01] <- "UP"
-# if log2Foldchange < -1 and pvalue < 0.01, set as "DOWN"
-de$diffexpressed[de$log2FoldChange < -1 & de$pvalue < 0.01] <- "DOWN"
-
-#This library avoids lable overlap in plots
-library(ggrepel)
-
-# Create a new column "names" to de, that will contain the name of a subset if genes differentially expressed (NA in case they are not)
-de$names <- NA
-# filter for a subset of interesting genes
-filter <- which(de$diffexpressed != "NO" & de$padj < 0.01 & (de$log2FoldChange > 1 | de$log2FoldChange < -1)) #<<
-de$names[filter] <- rownames(de)[filter] #<<
-
-####More filters
-
-#Lower the false discovery rate threshold (the threshold on `padj` in the results table)
-
-
-res.05 <- results(dds, alpha = 0.05)
-table(res.05$padj < 0.05) # genes that rejected null hypothesis
-summary(res.05)
-# Raise the log2 fold change threshold from 0 using the `lfcThreshold` argument of results
-# test for genes that show more substantial changes due to treatment
-# `lfcThreshold = 1`, we test for genes that show significant effects of treatment on gene counts more than doubling or less than halving, because 2^1=2
-
-resLFC1 <- results(dds, lfcThreshold=1)
-table(resLFC1$padj < 0.1)
-
-
-
-
-# Generate and save plot
+# Generate and save normal plot
 #save plot as png
 outdir = "/mnt/Timina/bioinfoII/XJS/Yalbi/kallisto/Results"
 png(file = paste0(outdir,"volcano_filter.png"), width = 800, height = 800) 
@@ -492,162 +452,44 @@ dev.off()
 Filtered plot
 
 ```{r, eval=FALSE}
-# Add a column to the data frame to specify if they are UP- or DOWN- regulated (log2FoldChange respectively positive or negative)
-deLFC1 <- as.data.frame(resLFC1)
 
-# add a column of NAs
-de$diffexpressed <- "NO"
-# if log2Foldchange > 0.6 and pvalue < 0.05, set as "UP" 
-de$diffexpressed[de$log2FoldChange > 0.6 & de$pvalue < 0.05] <- "UP"
-# if log2Foldchange < -0.6 and pvalue < 0.05, set as "DOWN"
-de$diffexpressed[de$log2FoldChange < -0.6 & de$pvalue < 0.05] <- "DOWN"
-
-png(file = paste0(outdir,"volcano04-res.png"),
-    width = 800, height = 800) # guardar el plot en formato png
-
-ggplot(data=de, aes(x=log2FoldChange, y=-log10(pvalue), col=diffexpressed)) + # cambiamos col param de aes #<<
-  geom_point() + theme_minimal() + 
-  geom_vline(xintercept=c(-0.6, 0.6), col="red") +
-  geom_hline(yintercept=-log10(0.05), col="red") +
-  xlim(-15,15)
+png(file = paste0(outdir,"volcano_filt.png"),
+    width = 800, height = 800)    
+ggplot(data=deLFC1, aes(x=log2FoldChange, y=-log10(pvalue), col=diffexpressed, label=names)) + #<<
+    geom_point() +
+  geom_point(x=0.305969,y=1.337297875,col="green") +
+    scale_color_manual(values=c("blue", "black", "red")) + #change dot colour #<<
+    theme_minimal() +
+    geom_text_repel() + #<<
+    xlim(-15,15)
 
 dev.off()
+
 ```
 
 
 
 
-
-
-
-
-<h3>
-
-Functional Analysis
-
-</h3>
+## Functional Analysis
 
 We used Gprofilter to make a gene ontology enrichment analysis to
-evaluate whether the results of our differential expression analysis
-make sense or not.
+assess whether the results of our differential expression analysis
+made sense or not.
 
-![Go - over expressed](./gost01-resSig.png) Gene ontology enrichment
-analysis of overexpressed genes in shRUNX1 samples: From this figure we
-see a significant overexpression of H2AX complex II, which makes sense
-in the context of RUNX1 oncogenic mutant given that we previously knew
-RUNX1 is associated with genome organization. Searching in the
-literature we found H2AX is an H2A histone variant group (ref 2) found
-in response to DNA damage, so it makes sense finding it overexpressed in
-presence of an activated oncogene because these often lead to more
-mutations and DNA damage to which the cell would most likely be trying
-to repair. To further understand if this overexpression of H2AX is a
-direct cause of RUNX1 mutant or if it's a factor that leads to RUNX1
-mutant we would have to make a more ditailed analysis of the literature
-or even some experiments, which overpass the purpose of this assay.
-
-![Go - underexpressed](./gost02-resSig.png) Gene ontology enrichment
-analysis of underexpressed genes in shRUNX1 samples. Searching in the
-literature we found that many of the genes that are significantly
-under-expressed are related to extra cellular matrix signaling
-components, which may explain why the immunity system fails to recognize
-the oncogenic cell in order to kill it. Gene - function relation
-(Ref3:Ref7)
-
--   TGFβ1, TGFβ2, and TGFβ3 : play an essential role in cellular
-    signaling and ECM remodeling.
-
--   PLXNA4 : Signaling for cytoskeleton remodeling
-
--   MMP14 and MMP2 : Breakdown of extracellular matrix.
-
--   CLDN1 : Cell - cell spatial interactions.
 
 <h4>
-
-Code to make the plots
-
+Code
 </h4>
 
 ```{r,eval=FALSE}
 library(ggrepel)
 library(gprofiler2)
 
-# For down-regulated genes
-
-# subset results for genes of interest
-resSig <- subset(res, padj < 0.01 & log2FoldChange < -1) # subset
-resSig <- resSig[ order(resSig$log2FoldChange, decreasing = TRUE), ]
-
-# define gene lists
-DEG <- rownames(resSig)
-genes_universe <- rownames(dds)
-
-# enrichment analysis
-gostres = gost(query = DEG, organism = "hsapiens", significant = T, 
-               correction_method = "fdr", domain_scope = "custom", 
-               custom_bg = genes_universe, ordered_query = TRUE)
-               
-library(forcats)
-library(ggplot2)
-
-outdir = "/mnt/Timina/bioinfoII/squinones/RNA-seq/RNA_MONI/"
-go <- as.data.frame(gostres$result)
-
-png(file = paste0(outdir,"gost02-resSig.png"),
-    width = 1800, height = 800) # guardar el plot en formato png
-# Reorder following the value of another column:
-go %>%
-  dplyr::slice(1:15) %>%
-  select(p_value, term_name) %>%
-  mutate(go = fct_reorder(term_name, p_value)) %>%
-  ggplot( aes(x=go, y=p_value)) +
-  geom_bar(stat="identity", fill="#3A68AE", alpha=.6, width=.4) +
-  coord_flip() +
-  labs(x = "", y = "Adjusted P-value") +
-  theme_bw(base_size = 20)
-
-dev.off()
-
-# For up-regulated genes
-
-# subset results for genes of interest
-resSig <- subset(res, padj < 0.01 & log2FoldChange > 1) # subset
-resSig <- resSig[ order(resSig$log2FoldChange, decreasing = TRUE), ]
-
-# define gene lists
-DEG <- rownames(resSig)
-genes_universe <- rownames(dds)
-
-# enrichment analysis
-gostres = gost(query = DEG, organism = "hsapiens", significant = T, 
-               correction_method = "fdr", domain_scope = "custom", 
-               custom_bg = genes_universe, ordered_query = TRUE)
-               
-library(forcats)
-library(ggplot2)
-
-outdir = "/mnt/Timina/bioinfoII/squinones/RNA-seq/RNA_MONI/"
-go <- as.data.frame(gostres$result)
-
-png(file = paste0(outdir,"gost02-resSig.png"),
-    width = 1800, height = 800) # guardar el plot en formato png
-# Reorder following the value of another column:
-go %>%
-  dplyr::slice(1:15) %>%
-  select(p_value, term_name) %>%
-  mutate(go = fct_reorder(term_name, p_value)) %>%
-  ggplot( aes(x=go, y=p_value)) +
-  geom_bar(stat="identity", fill="#3A68AE", alpha=.6, width=.4) +
-  coord_flip() +
-  labs(x = "", y = "Adjusted P-value") +
-  theme_bw(base_size = 20)
-
-dev.off()
 ```
 
 # References
 
-* Geo Dataset: https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE200705
+* Geo Dataset: https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE185492
 
 * SRA Run Selector: https://www.ncbi.nlm.nih.gov/Traces/study/?acc=PRJNA826106&o=acc_s%3Aa
 
@@ -655,57 +497,25 @@ Ref1: Mónica Padilla 2022, *RNA-seq Bioinformática - LCG-EJ*, Git Hub,
 viewed 10 March 2022,
 <https://github.com/mpadilla905/clase_RNA-seq_LCGEJ2022.git>
 
-Ref2: Uni Prot , *UniProtKB - P16104 (H2AX_HUMAN)* , Uni Prot,
-<https://www.uniprot.org/uniprot/P16104>
+Ref2: EnsEMBL, *Gene: Phf11c ENSMUSG00000091144*, EnsEMBL Core,
+<https://www.ensembl.org/Mus_musculus/Gene/Splice?db=core;g=ENSMUSG00000091144;r=14:59618282-59632830;t=ENSMUST00000166912>
 
-Ref3:Uni Prot , *UniProtKB - P36897 (TGFR1_HUMAN)* , Uni Prot,
-<https://www.uniprot.org/uniprot/P36897>
-
-Ref4:Wikipedia, *Receptores de TGF-beta* , Wikipedia
-<https://es.wikipedia.org/wiki/Receptores_de_TGF-beta>
-
-Ref5:Uni Prot , *UniProtKB - Q9HCM2 (PLXA4_HUMAN)* , Uni Prot,
-<https://www.uniprot.org/uniprot/Q9HCM2>
-
-Ref5:Uni Prot , *UniProtKB - P50281 (MMP14_HUMAN)* , Uni Prot,
-<https://www.uniprot.org/uniprot/P50281>
-
-Ref6:Uni Prot , *UniProtKB - P08253 (MMP2_HUMAN)* , Uni Prot,
-<https://www.uniprot.org/uniprot/P08253>
-
-Ref7:Uni Prot , *UniProtKB - O95832 (CLD1_HUMAN)* , Uni Prot,
-<https://www.uniprot.org/uniprot/O95832>
-
-Ref8:Uni Prot , *UniProtKB - P16949 (STMN1_HUMAN)* , Uni Prot,
-<https://www.uniprot.org/uniprot/P16949>
-
-Ref9:Uni Prot , *UniProtKB - P68431 (H31_HUMAN)* , Uni Prot,
-<https://www.uniprot.org/uniprot/P68431>
-
-Ref10:Uni Prot , *UniProtKB - Q9NQW6 (ANLN_HUMAN)* , Uni Prot,
-<https://www.uniprot.org/uniprot/Q9NQW6>
-
-Ref11:Uni Prot , *UniProtKB - P06280 (AGAL_HUMAN)* , Uni Prot,
-<https://www.uniprot.org/uniprot/P06280>
-
-Ref12:Wikipedia, *HIST1H3C* , Wikipedia
-<https://en.wikipedia.org/wiki/HIST1H3C>
-
-Ref13:Uni Prot , *UniProtKB - Q8IZT6 (ASPM_HUMAN)* , Uni Prot,
-<https://www.uniprot.org/uniprot/Q8IZT6>
-
-Ref14:Uni Prot , *UniProtKB - Q9NYY3 (PLK2_HUMAN)* , Uni Prot,
-<https://www.uniprot.org/uniprot/Q9NYY3>
-
-Ref15: Pacher Lab, *Kallisto -Maual*, Pacher Lab,
+Ref3: Pacher Lab, *Kallisto -Maual*, Pacher Lab,
 <https://pachterlab.github.io/kallisto/manual>
 
-Ref16: USADELLAB, *Trimmomatic: A flexible read trimming tool for
+Ref4: USADELLAB, *Trimmomatic: A flexible read trimming tool for
 Illumina NGS data*, USADELLAB ORG,
 <http://www.usadellab.org/cms/?page=trimmomatic>
 
-Ref17: MultiQC, *Using MultiQC*, MultiQC Docs,
+Ref5: MultiQC, *Using MultiQC*, MultiQC Docs,
 <https://multiqc.info/docs/>
 
-Ref18: Bioconductor, *Package 'taximport'*, Bioconductor,
+Ref6: Bioconductor, *Package 'tximport'*, Bioconductor,
 <https://bioconductor.org/packages/devel/bioc/manuals/tximport/man/tximport.pdf>
+
+Ref7: Documentation, *MultiQC*,
+<https://multiqc.info/docs/>
+
+Ref8: SRA-documentation, *Prefetch to local files*,
+<https://github.com/ncbi/sra-tools/issues/71>
+
